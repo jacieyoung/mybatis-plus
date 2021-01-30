@@ -1,4 +1,4 @@
-package com.baomidou.mybatisplus.core.injector.methods;
+package com.baomidou.mybatisplus.extension.injector.methods;
 
 import com.baomidou.mybatisplus.core.injector.AbstractMethod;
 import com.baomidou.mybatisplus.core.metadata.TableInfo;
@@ -9,7 +9,7 @@ import org.apache.ibatis.mapping.SqlSource;
 import org.apache.ibatis.scripting.defaults.RawSqlSource;
 
 /**
- * @Description:
+ * @Description: 通过唯一索引查询
  * @Author: 杨家星
  * @Date: 2021/01/30 22:33
  */
