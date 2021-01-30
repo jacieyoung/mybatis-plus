@@ -32,10 +32,7 @@ import org.apache.ibatis.mapping.ResultMap;
 import org.apache.ibatis.mapping.ResultMapping;
 import org.apache.ibatis.session.Configuration;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 
@@ -83,9 +80,23 @@ public class TableInfo implements Constants {
      */
     private String keyColumn;
     /**
+     * 表唯一索引 字段名 列表
+     */
+    private List<String> uniqueKeyColumns;
+    /**
      * 表主键ID 属性名
      */
     private String keyProperty;
+    /**
+     * 表唯一索引 属性名 列表
+     */
+    private List<String> uniqueKeyProperties;
+
+    /**
+     * 唯一索引字段 属性名和属性类型映射 列表
+     */
+    private List<Map<String,Class<?>>> uniqueKeyPropertiesList;
+
     /**
      * 表主键ID 属性类型
      */
@@ -173,6 +184,15 @@ public class TableInfo implements Constants {
     @Getter
     @Setter(AccessLevel.NONE)
     private TableFieldInfo versionFieldInfo;
+
+    /**
+     * 唯一索引字段列表
+     */
+    @Getter
+    @Setter(AccessLevel.NONE)
+    private List<TableFieldInfo> uniqueKeyFieldInfos;
+
+
 
     public TableInfo(Class<?> entityType) {
         this.entityType = entityType;

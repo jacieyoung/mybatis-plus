@@ -284,6 +284,11 @@ public class TableInfoHelper {
         boolean existTableLogic = isExistTableLogic(list);
 
         List<TableFieldInfo> fieldList = new ArrayList<>(list.size());
+        List<TableFieldInfo> uniqueKeyFieldInfos = new ArrayList<>(1);
+        TreeMap<Integer, TableFieldInfo> uniqueKeyMap = new TreeMap<>();
+        List<Map<String, Class<?>>> uniqueKeyPropertiesList = new ArrayList<>(1);
+        List<String> uniqueKeyColumns = new ArrayList<>();
+        List<String> uniqueKeyProperties = new ArrayList<>();
         for (Field field : list) {
             if (excludeProperty.contains(field.getName())) {
                 continue;
@@ -307,6 +312,26 @@ public class TableInfoHelper {
                     continue;
                 }
             }
+
+            TableUniqueKey uniqueKey = field.getAnnotation(TableUniqueKey.class);
+            if(null!=uniqueKey){
+
+                if(uniqueKeyMap.containsKey(uniqueKey.seq())){
+                    throw ExceptionUtils.mpe("@TableUniqueKey 顺序重复 in Class: \"%s\".", clazz.getName());
+                }
+                TableFieldInfo tableField = new TableFieldInfo(dbConfig, tableInfo, field, reflector, existTableLogic);
+                uniqueKeyMap.put(uniqueKey.seq(), tableField);
+                final String property = field.getName();
+                final Class<?> fieldType = reflector.getGetterType(property);
+
+                Map<String, Class<?>> temp = new HashMap<>();
+                temp.put(property, fieldType);
+                uniqueKeyPropertiesList.add(temp);
+
+
+            }
+
+
             final TableField tableField = field.getAnnotation(TableField.class);
 
             /* 有 @TableField 注解的字段初始化 */
@@ -321,7 +346,16 @@ public class TableInfoHelper {
 
         /* 字段列表 */
         tableInfo.setFieldList(fieldList);
-
+        if(CollectionUtils.isNotEmpty(uniqueKeyMap)){
+            uniqueKeyMap.forEach((k,v)->{
+                uniqueKeyFieldInfos.add(v);
+                uniqueKeyColumns.add(v.getColumn());
+                uniqueKeyProperties.add(v.getProperty());
+            });
+            tableInfo.setUniqueKeyColumns(uniqueKeyColumns);
+            tableInfo.setUniqueKeyProperties(uniqueKeyProperties);
+            tableInfo.setUniqueKeyPropertiesList(uniqueKeyPropertiesList);
+        }
         /* 未发现主键注解，提示警告信息 */
         if (!isReadPK) {
             logger.warn(String.format("Can not find table primary key in Class: \"%s\".", clazz.getName()));

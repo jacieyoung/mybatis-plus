@@ -33,5 +33,9 @@ public @interface TableUniqueKey {
      */
     String value() default "";
 
+    /**
+     * 字段顺序 超过一个必须要有 而且不能重复
+     * @return 0
+     */
     int seq() default 0;
 }
