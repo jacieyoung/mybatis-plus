@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2021, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -89,9 +89,9 @@ public abstract class AbstractLambdaWrapper<T, Children extends AbstractLambdaWr
                 lambdaClass = entityClass;
             }
             columnMap = LambdaUtils.getColumnMap(lambdaClass);
+            Assert.notNull(columnMap, "can not find lambda cache for this entity [%s]", lambdaClass.getName());
             initColumnMap = true;
         }
-        Assert.notNull(columnMap, "can not find lambda cache for this entity [%s]", lambdaClass.getName());
     }
 
     private ColumnCache getColumnCache(String fieldName, Class<?> lambdaClass) {

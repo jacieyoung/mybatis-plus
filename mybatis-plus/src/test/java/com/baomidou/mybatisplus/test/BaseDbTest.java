@@ -1,5 +1,28 @@
 package com.baomidou.mybatisplus.test;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.List;
+import java.util.function.Consumer;
+
+import javax.sql.DataSource;
+
+import org.apache.ibatis.builder.xml.XMLMapperBuilder;
+import org.apache.ibatis.io.Resources;
+import org.apache.ibatis.logging.slf4j.Slf4jImpl;
+import org.apache.ibatis.mapping.Environment;
+import org.apache.ibatis.plugin.Interceptor;
+import org.apache.ibatis.session.Configuration;
+import org.apache.ibatis.session.ExecutorType;
+import org.apache.ibatis.session.SqlSession;
+import org.apache.ibatis.session.SqlSessionFactory;
+import org.apache.ibatis.transaction.jdbc.JdbcTransactionFactory;
+import org.apache.ibatis.type.TypeReference;
+import org.h2.Driver;
+import org.jetbrains.annotations.Nullable;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.SimpleDriverDataSource;
+
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.MybatisSqlSessionFactoryBuilder;
 import com.baomidou.mybatisplus.core.config.GlobalConfig;
@@ -7,25 +30,6 @@ import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.baomidou.mybatisplus.core.toolkit.ExceptionUtils;
 import com.baomidou.mybatisplus.core.toolkit.GlobalConfigUtils;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
-import org.apache.ibatis.builder.xml.XMLMapperBuilder;
-import org.apache.ibatis.io.Resources;
-import org.apache.ibatis.logging.slf4j.Slf4jImpl;
-import org.apache.ibatis.mapping.Environment;
-import org.apache.ibatis.plugin.Interceptor;
-import org.apache.ibatis.session.Configuration;
-import org.apache.ibatis.session.SqlSession;
-import org.apache.ibatis.session.SqlSessionFactory;
-import org.apache.ibatis.transaction.jdbc.JdbcTransactionFactory;
-import org.apache.ibatis.type.TypeReference;
-import org.h2.Driver;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.datasource.SimpleDriverDataSource;
-
-import javax.sql.DataSource;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.List;
-import java.util.function.Consumer;
 
 /**
  * @author miemie
@@ -35,6 +39,7 @@ public abstract class BaseDbTest<T> extends TypeReference<T> {
 
     protected SqlSessionFactory sqlSessionFactory;
     protected Class<T> mapper;
+    protected JdbcTemplate jdbcTemplate;
 
     @SuppressWarnings("unchecked")
     public BaseDbTest() {
@@ -47,17 +52,17 @@ public abstract class BaseDbTest<T> extends TypeReference<T> {
         Consumer<Configuration> consumer = consumer();
         mapper = (Class<T>) getRawType();
 
-        JdbcTemplate template = new JdbcTemplate(ds);
+        jdbcTemplate = new JdbcTemplate(ds);
         if (CollectionUtils.isNotEmpty(tableSql)) {
             for (String sql : tableSql) {
                 if (StringUtils.isNotBlank(sql)) {
-                    template.execute(sql);
+                    jdbcTemplate.execute(sql);
                 }
             }
         }
 
         if (StringUtils.isNotBlank(tableDataSql)) {
-            template.execute(tableDataSql);
+            jdbcTemplate.execute(tableDataSql);
         }
         MybatisSqlSessionFactoryBuilder builder = new MybatisSqlSessionFactoryBuilder();
         Environment environment = new Environment("test", new JdbcTransactionFactory(), ds);
@@ -72,7 +77,7 @@ public abstract class BaseDbTest<T> extends TypeReference<T> {
             try {
                 InputStream inputStream = Resources.getResourceAsStream(mapperXml);
                 XMLMapperBuilder xmlMapperBuilder = new XMLMapperBuilder(inputStream,
-                    configuration, mapperXml, configuration.getSqlFragments());
+                        configuration, mapperXml, configuration.getSqlFragments());
                 xmlMapperBuilder.parse();
             } catch (IOException e) {
                 throw ExceptionUtils.mpe(e);
@@ -94,25 +99,38 @@ public abstract class BaseDbTest<T> extends TypeReference<T> {
         return dataSource;
     }
 
-    protected SqlSession autoCommitSession(boolean autoCommit) {
-        return sqlSessionFactory.openSession(autoCommit);
+    protected SqlSession sqlSession(@Nullable ExecutorType type) {
+        return sqlSessionFactory.openSession(type);
     }
 
     protected void doTest(Consumer<T> consumer) {
-        try (SqlSession sqlSession = autoCommitSession(false)) {
+        try (SqlSession sqlSession = sqlSession(null)) {
             doTest(sqlSession, consumer);
         }
     }
 
     protected void doTestAutoCommit(Consumer<T> consumer) {
-        try (SqlSession sqlSession = autoCommitSession(true)) {
-            doTest(sqlSession, consumer);
+        try (SqlSession sqlSession = sqlSession(null)) {
+            doTestAutoCommit(sqlSession, consumer);
         }
     }
 
     protected void doTest(SqlSession sqlSession, Consumer<T> consumer) {
+        doMapper(sqlSession, false, consumer);
+    }
+
+    protected void doTestAutoCommit(SqlSession sqlSession, Consumer<T> consumer) {
+        doMapper(sqlSession, true, consumer);
+    }
+
+    protected void doMapper(SqlSession sqlSession, boolean commit, Consumer<T> consumer) {
         T t = sqlSession.getMapper(mapper);
         consumer.accept(t);
+        if (commit) {
+            sqlSession.commit();
+        } else {
+            sqlSession.rollback();
+        }
     }
 
     protected List<String> tableSql() {

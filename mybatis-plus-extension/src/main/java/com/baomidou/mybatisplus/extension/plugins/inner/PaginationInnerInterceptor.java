@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2021, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -138,8 +138,16 @@ public class PaginationInnerInterceptor implements InnerInterceptor {
         }
 
         CacheKey cacheKey = executor.createCacheKey(countMs, parameter, rowBounds, countSql);
-        Object result = executor.query(countMs, parameter, rowBounds, resultHandler, cacheKey, countSql).get(0);
-        page.setTotal(result == null ? 0L : Long.parseLong(result.toString()));
+        List<Object> result = executor.query(countMs, parameter, rowBounds, resultHandler, cacheKey, countSql);
+        long total = 0;
+        if (CollectionUtils.isNotEmpty(result)) {
+            // 个别数据库 count 没数据不会返回 0
+            Object o = result.get(0);
+            if (o != null) {
+                total = Long.parseLong(o.toString());
+            }
+        }
+        page.setTotal(total);
         return continuePage(page);
     }
 
@@ -394,8 +402,7 @@ public class PaginationInnerInterceptor implements InnerInterceptor {
     }
 
     protected List<OrderByElement> addOrderByElements(List<OrderItem> orderList, List<OrderByElement> orderByElements) {
-        orderByElements = CollectionUtils.isEmpty(orderByElements) ? new ArrayList<>(orderList.size()) : orderByElements;
-        List<OrderByElement> orderByElementList = orderList.stream()
+        List<OrderByElement> additionalOrderBy = orderList.stream()
             .filter(item -> StringUtils.isNotBlank(item.getColumn()))
             .map(item -> {
                 OrderByElement element = new OrderByElement();
@@ -404,7 +411,10 @@ public class PaginationInnerInterceptor implements InnerInterceptor {
                 element.setAscDescPresent(true);
                 return element;
             }).collect(Collectors.toList());
-        orderByElements.addAll(orderByElementList);
+        if (CollectionUtils.isEmpty(orderByElements)) {
+            return additionalOrderBy;
+        }
+        orderByElements.addAll(additionalOrderBy);
         return orderByElements;
     }
 

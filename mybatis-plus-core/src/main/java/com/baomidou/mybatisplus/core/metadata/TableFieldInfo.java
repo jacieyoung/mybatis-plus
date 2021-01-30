@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2021, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -180,7 +180,7 @@ public class TableFieldInfo implements Constants {
         String el = this.property;
         if (JdbcType.UNDEFINED != jdbcType) {
             this.jdbcType = jdbcType;
-            el += (COMMA + "jdbcType=" + jdbcType.name());
+            el += (COMMA + SqlScriptUtils.mappingJdbcType(jdbcType));
         }
         if (UnknownTypeHandler.class != typeHandler) {
             this.typeHandler = (Class<? extends TypeHandler<?>>) typeHandler;
@@ -200,10 +200,10 @@ public class TableFieldInfo implements Constants {
                 }
                 el += (COMMA + "javaType=" + javaType);
             }
-            el += (COMMA + "typeHandler=" + typeHandler.getName());
+            el += (COMMA + SqlScriptUtils.mappingTypeHandler(this.typeHandler));
         }
         if (StringUtils.isNotBlank(numericScale)) {
-            el += (COMMA + "numericScale=" + numericScale);
+            el += (COMMA + SqlScriptUtils.mappingNumericScale(Integer.valueOf(numericScale)));
         }
         this.el = el;
         this.initLogicDelete(dbConfig, field, existTableLogic);
